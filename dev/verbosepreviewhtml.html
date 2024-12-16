@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--          /                   \         -->
+<!--         /                     \        -->
+<!--        /                       \       -->
+<!--       /                         \      -->
+<!--      |  Created by Logan Schmit  |     -->
+<!--       \      Using ChatGPT      /      -->
+<!--        \                       /       -->
+<!--         \                     /        -->
+<!--          \                   /         -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Live Preview with Console</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+        }
+        .editor, .preview {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .editor {
+            background-color: #f4f4f4;
+            border-right: 2px solid #ccc;
+        }
+        .editor textarea {
+            width: 100%;
+            height: 90%;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            border: none;
+            outline: none;
+            resize: none;
+        }
+        .preview {
+            background-color: #fff;
+            border-left: 2px solid #ccc;
+            position: relative;
+        }
+        .preview iframe {
+            width: 100%;
+            height: 90%;
+            border: none;
+        }
+        .console {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            height: 10%;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            border-top: 2px solid #ccc;
+            display: flex;
+            flex-direction: column;
+        }
+        .console input {
+            width: 100%;
+            padding: 5px;
+            border: none;
+            outline: none;
+            background: #444;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+        h2 {
+            margin: 0 0 10px;
+            font-size: 20px;
+        }
+        .editor h2, .preview h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor">
+            <h2>HTML Editor</h2>
+            <textarea id="htmlInput" placeholder="Write your HTML code here..."></textarea>
+        </div>
+        <div class="preview">
+            <h2>Live Preview</h2>
+            <iframe id="preview"></iframe>
+        </div>
+    </div>
+    <div class="console" id="console">
+        <input type="text" id="commandInput" placeholder="Enter JavaScript command here..." />
+    </div>
+
+    <script>
+        const htmlInput = document.getElementById('htmlInput');
+        const previewFrame = document.getElementById('preview');
+        const previewDocument = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        const consoleDiv = document.getElementById('console');
+        const commandInput = document.getElementById('commandInput');
+
+        // Function to display messages in the custom console
+        function logToConsole(message, type) {
+            const logMessage = document.createElement('div');
+            logMessage.textContent = `${type}: ${message}`;
+            logMessage.style.color = type === 'ERROR' ? 'red' : 'white';
+            consoleDiv.insertBefore(logMessage, commandInput);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto-scroll to bottom
+        }
+
+        // Override console.log to display in the custom console
+        const originalConsoleLog = console.log;
+        console.log = function(message) {
+            logToConsole(message, 'LOG');
+            originalConsoleLog.apply(console, arguments);
+        };
+
+        // Override console.error to display in the custom console
+        const originalConsoleError = console.error;
+        console.error = function(message) {
+            logToConsole(message, 'ERROR');
+            originalConsoleError.apply(console, arguments);
+        };
+
+        // Capture and log all errors (JavaScript, HTML, CORS, etc.)
+        function setupIframeErrorHandling() {
+            const iframe = document.getElementById('preview');
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+            // Capture load errors (HTML, CSS, CORS issues)
+            iframeDocument.addEventListener('error', function(event) {
+                const srcElement = event.target.tagName || 'Unknown';
+                console.error(`Resource error: ${srcElement} failed to load, likely due to CORS or network issues.`);
+            }, true);
+
+            // Capture runtime JavaScript errors
+            iframeDocument.defaultView.onerror = function(message, source, lineno, colno, error) {
+                console.error(`${message} at ${source}:${lineno}:${colno}`);
+                return true; // Prevent the default browser error handling
+            };
+        }
+
+        // Execute JavaScript commands in the iframe context
+        function executeCommand(command) {
+            try {
+                const iframeWindow = previewFrame.contentWindow;
+                const result = iframeWindow.eval(command);
+                logToConsole('Result: ' + result, 'LOG');
+            } catch (error) {
+                logToConsole('Error: ' + error.message, 'ERROR');
+            }
+        }
+
+        // Update the preview and setup error handling when the user types
+        htmlInput.addEventListener('input', function() {
+            const html = htmlInput.value;
+            previewDocument.open();
+            previewDocument.write(`
+                <script>
+                    // Override console.log and console.error in the iframe
+                    (function() {
+                        const originalConsoleLog = console.log;
+                        const originalConsoleError = console.error;
+                        console.log = function(message) {
+                            window.parent.console.log(message);
+                        };
+                        console.error = function(message) {
+                            window.parent.console.error(message);
+                        };
+                        window.onerror = function(message, source, lineno, colno, error) {
+                            window.parent.console.error(message + ' at ' + source + ':' + lineno + ':' + colno);
+                            return true; // Prevent the default browser error handling
+                        };
+                    })();
+                <\/script>
+            ` + html);
+            previewDocument.close();
+            setupIframeErrorHandling();
+        });
+
+        // Handle command input
+        commandInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const command = commandInput.value;
+                executeCommand(command);
+                commandInput.value = ''; // Clear input after executing
+            }
+        });
+
+        // Initialize with empty content
+        previewDocument.open();
+        previewDocument.write("");
+        previewDocument.close();
+    </script>
+</body>
+</html>
