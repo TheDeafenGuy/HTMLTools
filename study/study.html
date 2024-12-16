@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--          /                   \         -->
+<!--         /                     \        -->
+<!--        /                       \       -->
+<!--       /                         \      -->
+<!--      |  Created by Logan Schmit  |     -->
+<!--       \      Using ChatGPT      /      -->
+<!--        \                       /       -->
+<!--         \                     /        -->
+<!--          \                   /         -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Study Tool</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #800000;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #0056b3;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #createMode, #studyMode {
+            display: inline-block;
+            width: 48%;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        input[type="file"] {
+            margin-bottom: 15px;
+        }
+
+        select {
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul li {
+            background: #f0f4f8;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        #quizContainer {
+            margin-top: 30px;
+        }
+
+        #quizPrompt {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #quizResult {
+            margin-top: 20px;
+            font-weight: bold;
+            color: green;
+        }
+
+        .incorrect {
+            color: red;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flashcard Study Tool</h1>
+        <div>
+            <button id="createMode">Create Mode</button>
+            <button id="studyMode">Study Mode</button>
+        </div>
+
+        <!-- Create Mode -->
+        <div id="flashcardForm" class="hidden">
+            <h2>Create Flashcards</h2>
+            <div class="form-section">
+                <label>Word:</label>
+                <input type="text" id="wordInput" placeholder="Enter a word...">
+                <label>Phrase:</label>
+                <input type="text" id="phraseInput" placeholder="Enter a phrase...">
+                <button id="addCard">Add Flashcard</button>
+            </div>
+
+            <div id="cardContainer">
+                <h3>Current Flashcards</h3>
+                <ul id="flashcardList"></ul>
+                <button id="exportQuiz">Export Quiz</button>
+            </div>
+        </div>
+
+        <!-- Study Mode -->
+        <div id="quizArea" class="hidden">
+            <h2>Study Flashcards</h2>
+            <div class="form-section">
+                <input type="file" id="loadQuiz">
+                <label>Study Method:</label>
+                <select id="studyMethod">
+                    <option value="wordToPhrase">Word to Phrase</option>
+                    <option value="phraseToWord">Phrase to Word</option>
+                </select>
+                <button id="startQuiz">Start Quiz</button>
+            </div>
+
+            <div id="quizContainer" class="hidden">
+                <h3 id="quizPrompt"></h3>
+                <input type="text" id="answerInput" placeholder="Enter your answer...">
+                <button id="submitAnswer">Submit Answer</button>
+                <div id="quizResult"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Flashcard Study Tool</p>
+        </footer>
+    </div>
+
+    <script>
+        let flashcards = [];
+        let currentQuiz = [];
+        let incorrectList = [];
+        let currentCardIndex = 0;
+        let studyMode = 'wordToPhrase';
+
+        document.getElementById('createMode').addEventListener('click', () => {
+            toggleView('flashcardForm');
+        });
+
+        document.getElementById('studyMode').addEventListener('click', () => {
+            toggleView('quizArea');
+        });
+
+        document.getElementById('addCard').addEventListener('click', () => {
+            const word = document.getElementById('wordInput').value.trim();
+            const phrase = document.getElementById('phraseInput').value.trim();
+            if (word && phrase) {
+                flashcards.push({ word, phrase });
+                displayFlashcards();
+            }
+        });
+
+        document.getElementById('exportQuiz').addEventListener('click', () => {
+            const data = JSON.stringify(flashcards);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quiz.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        document.getElementById('loadQuiz').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentQuiz = JSON.parse(e.target.result);
+                    alert('Quiz loaded successfully!');
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('startQuiz').addEventListener('click', () => {
+            studyMode = document.getElementById('studyMethod').value;
+            if (currentQuiz.length > 0) {
+                incorrectList = [];
+                shuffleArray(currentQuiz);
+                currentCardIndex = 0;
+                showNextCard();
+            }
+        });
+
+        document.getElementById('submitAnswer').addEventListener('click', () => {
+            const answer = document.getElementById('answerInput').value.trim();
+            const currentCard = currentQuiz[currentCardIndex];
+            let correctAnswer = studyMode === 'wordToPhrase' ? currentCard.phrase : currentCard.word;
+
+            if (answer.toLowerCase() === correctAnswer.toLowerCase()) {
+                document.getElementById('quizResult').textContent = "Correct!";
+                document.getElementById('quizResult').classList.remove('incorrect');
+            } else {
+                document.getElementById('quizResult').textContent = `Incorrect! Correct answer was: ${correctAnswer}`;
+                document.getElementById('quizResult').classList.add('incorrect');
+                incorrectList.push(currentCard);
+            }
+
+            currentCardIndex++;
+            if (currentCardIndex < currentQuiz.length) {
+                showNextCard();
+            } else if (incorrectList.length > 0) {
+                shuffleArray(incorrectList);
+                alert('Now quizzing on incorrect answers.');
+                currentQuiz = incorrectList;
+                incorrectList = [];
+                currentCardIndex = 0;
+                showNextCard();
+            } else {
+                alert('You have completed the quiz!');
+                document.getElementById('quizContainer').classList.add('hidden');
+            }
+        });
+
+        function showNextCard() {
+            const currentCard = currentQuiz[currentCardIndex];
+            let prompt = studyMode === 'wordToPhrase' ? currentCard.word : currentCard.phrase;
+            document.getElementById('quizPrompt').textContent = prompt;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('quizContainer').classList.remove('hidden');
+        }
+
+        function displayFlashcards() {
+            const list = document.getElementById('flashcardList');
+            list.innerHTML = '';
+            flashcards.forEach(card => {
+                const li = document.createElement('li');
+                li.textContent = `${card.word} - ${card.phrase}`;
+                list.appendChild(li);
+            });
+        }
+
+        function toggleView(showId) {
+            document.getElementById('flashcardForm').classList.add('hidden');
+            document.getElementById('quizArea').classList.add('hidden');
+            document.getElementById(showId).classList.remove('hidden');
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    </script>
+</body>
+</html>
