@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--          /                   \         -->
+<!--         /                     \        -->
+<!--        /                       \       -->
+<!--       /                         \      -->
+<!--      |  Created by Logan Schmit  |     -->
+<!--       \      Using ChatGPT      /      -->
+<!--        \                       /       -->
+<!--         \                     /        -->
+<!--          \                   /         -->
+    <!-- Head content remains the same -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Study Tool</title>
+    <style>
+        /* Styles for a professional look */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #800000;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #0056b3;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #createMode, #studyMode, #multipleChoiceMode {
+            display: inline-block;
+            width: 30%;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="file"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul li {
+            background: #f0f4f8;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        #quizContainer, #mcQuizContainer {
+            margin-top: 30px;
+        }
+
+        #quizPrompt, #mcQuizPrompt {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #quizResult, #mcQuizResult {
+            margin-top: 20px;
+            font-weight: bold;
+            color: green;
+        }
+
+        .incorrect {
+            color: red;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #777;
+        }
+
+        /* Styles for Multiple Choice Options */
+        .options {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .options li {
+            background: #e9ecef;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .options li:hover {
+            background-color: #ced4da;
+        }
+
+        .selected {
+            background-color: #adb5bd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flashcard Study Tool</h1>
+        <div>
+            <button id="createMode">Create Mode</button>
+            <button id="studyMode">Study Mode</button>
+            <button id="multipleChoiceMode">Multiple Choice Mode</button>
+        </div>
+
+        <!-- Create Mode -->
+        <div id="flashcardForm" class="hidden">
+            <h2>Create Flashcards</h2>
+            <div class="form-section">
+                <label>Word:</label>
+                <input type="text" id="wordInput" placeholder="Enter a word...">
+                <label>Phrase:</label>
+                <input type="text" id="phraseInput" placeholder="Enter a phrase...">
+                <button id="addCard">Add Flashcard</button>
+            </div>
+
+            <div id="cardContainer">
+                <h3>Current Flashcards</h3>
+                <ul id="flashcardList"></ul>
+                <button id="exportQuiz">Export Quiz</button>
+            </div>
+        </div>
+
+        <!-- Study Mode -->
+        <div id="quizArea" class="hidden">
+            <h2>Study Flashcards</h2>
+            <div class="form-section">
+                <input type="file" id="loadQuiz">
+                <label>Study Method:</label>
+                <select id="studyMethod">
+                    <option value="wordToPhrase">Word to Phrase</option>
+                    <option value="phraseToWord">Phrase to Word</option>
+                </select>
+                <button id="startQuiz">Start Quiz</button>
+            </div>
+
+            <div id="quizContainer" class="hidden">
+                <h3 id="quizPrompt"></h3>
+                <input type="text" id="answerInput" placeholder="Enter your answer...">
+                <button id="submitAnswer">Submit Answer</button>
+                <div id="quizResult"></div>
+            </div>
+        </div>
+
+        <!-- Multiple Choice Mode -->
+        <div id="multipleChoiceArea" class="hidden">
+            <h2>Multiple Choice Quiz</h2>
+            <div class="form-section">
+                <input type="file" id="loadMCQuiz">
+                <label>Study Method:</label>
+                <select id="mcStudyMethod">
+                    <option value="wordToPhrase">Word to Phrase</option>
+                    <option value="phraseToWord">Phrase to Word</option>
+                </select>
+                <button id="startMCQuiz">Start Quiz</button>
+            </div>
+
+            <div id="mcQuizContainer" class="hidden">
+                <h3 id="mcQuizPrompt"></h3>
+                <ul class="options" id="mcOptionsList"></ul>
+                <div id="mcQuizResult"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Created by Logan Schmit using ChatGPT</p>
+        </footer>
+    </div>
+
+    <script>
+        // Variables
+        let flashcards = [];
+        let currentQuiz = [];
+        let incorrectList = [];
+        let currentCardIndex = 0;
+        let studyMode = 'wordToPhrase';
+
+        let mcCurrentQuiz = [];
+        let mcIncorrectList = [];
+        let mcCurrentCardIndex = 0;
+        let mcStudyMode = 'wordToPhrase';
+
+        // Event listeners for mode buttons
+        document.getElementById('createMode').addEventListener('click', () => {
+            toggleView('flashcardForm');
+        });
+
+        document.getElementById('studyMode').addEventListener('click', () => {
+            toggleView('quizArea');
+        });
+
+        document.getElementById('multipleChoiceMode').addEventListener('click', () => {
+            toggleView('multipleChoiceArea');
+        });
+
+        // Create Mode Functions
+        document.getElementById('addCard').addEventListener('click', () => {
+            const word = document.getElementById('wordInput').value.trim();
+            const phrase = document.getElementById('phraseInput').value.trim();
+            if (word && phrase) {
+                flashcards.push({ word, phrase });
+                displayFlashcards();
+                document.getElementById('wordInput').value = '';
+                document.getElementById('phraseInput').value = '';
+            }
+        });
+
+        document.getElementById('exportQuiz').addEventListener('click', () => {
+            const data = JSON.stringify(flashcards);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quiz.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        function displayFlashcards() {
+            const list = document.getElementById('flashcardList');
+            list.innerHTML = '';
+            flashcards.forEach(card => {
+                const li = document.createElement('li');
+                li.textContent = `${card.word} - ${card.phrase}`;
+                list.appendChild(li);
+            });
+        }
+
+        // Study Mode Functions
+        document.getElementById('loadQuiz').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentQuiz = JSON.parse(e.target.result);
+                    alert('Quiz loaded successfully!');
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('startQuiz').addEventListener('click', () => {
+            studyMode = document.getElementById('studyMethod').value;
+            if (currentQuiz.length > 0) {
+                incorrectList = [];
+                shuffleArray(currentQuiz);
+                currentCardIndex = 0;
+                showNextCard();
+            }
+        });
+
+        document.getElementById('submitAnswer').addEventListener('click', checkAnswer);
+
+        function checkAnswer() {
+            const answer = document.getElementById('answerInput').value.trim();
+            const currentCard = currentQuiz[currentCardIndex];
+            let correctAnswer = studyMode === 'wordToPhrase' ? currentCard.phrase : currentCard.word;
+
+            if (answer.toLowerCase() === correctAnswer.toLowerCase()) {
+                document.getElementById('quizResult').textContent = "Correct!";
+                document.getElementById('quizResult').classList.remove('incorrect');
+            } else {
+                document.getElementById('quizResult').textContent = `Incorrect! Correct answer was: ${correctAnswer}`;
+                document.getElementById('quizResult').classList.add('incorrect');
+                incorrectList.push(currentCard);
+            }
+
+            // Disable input and change button text
+            document.getElementById('answerInput').disabled = true;
+            document.getElementById('submitAnswer').textContent = 'Next Question';
+            document.getElementById('submitAnswer').removeEventListener('click', checkAnswer);
+            document.getElementById('submitAnswer').addEventListener('click', nextQuestion);
+        }
+
+        function nextQuestion() {
+            currentCardIndex++;
+            if (currentCardIndex < currentQuiz.length) {
+                showNextCard();
+            } else if (incorrectList.length > 0) {
+                shuffleArray(incorrectList);
+                alert('Now quizzing on incorrect answers.');
+                currentQuiz = incorrectList;
+                incorrectList = [];
+                currentCardIndex = 0;
+                showNextCard();
+            } else {
+                alert('You have completed the quiz!');
+                document.getElementById('quizContainer').classList.add('hidden');
+            }
+        }
+
+        function showNextCard() {
+            const currentCard = currentQuiz[currentCardIndex];
+            let prompt = studyMode === 'wordToPhrase' ? currentCard.word : currentCard.phrase;
+            document.getElementById('quizPrompt').textContent = prompt;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').disabled = false;
+            document.getElementById('quizResult').textContent = '';
+            document.getElementById('quizContainer').classList.remove('hidden');
+
+            // Reset submit button
+            document.getElementById('submitAnswer').textContent = 'Submit Answer';
+            document.getElementById('submitAnswer').removeEventListener('click', nextQuestion);
+            document.getElementById('submitAnswer').addEventListener('click', checkAnswer);
+        }
+
+        // Multiple Choice Mode Functions
+        document.getElementById('loadMCQuiz').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    mcCurrentQuiz = JSON.parse(e.target.result);
+                    alert('Quiz loaded successfully!');
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('startMCQuiz').addEventListener('click', () => {
+            mcStudyMode = document.getElementById('mcStudyMethod').value;
+            if (mcCurrentQuiz.length > 0) {
+                mcIncorrectList = [];
+                shuffleArray(mcCurrentQuiz);
+                mcCurrentCardIndex = 0;
+                showNextMCCard();
+            }
+        });
+
+        function showNextMCCard() {
+            const currentCard = mcCurrentQuiz[mcCurrentCardIndex];
+            let prompt = mcStudyMode === 'wordToPhrase' ? currentCard.word : currentCard.phrase;
+            let correctAnswer = mcStudyMode === 'wordToPhrase' ? currentCard.phrase : currentCard.word;
+
+            document.getElementById('mcQuizPrompt').textContent = prompt;
+            document.getElementById('mcQuizResult').textContent = '';
+            generateOptions(correctAnswer);
+            document.getElementById('mcQuizContainer').classList.remove('hidden');
+        }
+
+        function generateOptions(correctAnswer) {
+            const optionsList = document.getElementById('mcOptionsList');
+            optionsList.innerHTML = '';
+            let options = [correctAnswer];
+
+            // Get other options
+            while (options.length < 4 && options.length < mcCurrentQuiz.length) {
+                let randomCard = mcCurrentQuiz[Math.floor(Math.random() * mcCurrentQuiz.length)];
+                let option = mcStudyMode === 'wordToPhrase' ? randomCard.phrase : randomCard.word;
+                if (!options.includes(option)) {
+                    options.push(option);
+                }
+            }
+
+            shuffleArray(options);
+
+            options.forEach(option => {
+                const li = document.createElement('li');
+                li.textContent = option;
+                li.addEventListener('click', () => {
+                    checkMCAnswer(option, correctAnswer, li);
+                });
+                optionsList.appendChild(li);
+            });
+        }
+
+        function checkMCAnswer(selectedOption, correctAnswer, selectedElement) {
+            if (selectedOption === correctAnswer) {
+                document.getElementById('mcQuizResult').textContent = "Correct!";
+                document.getElementById('mcQuizResult').classList.remove('incorrect');
+            } else {
+                document.getElementById('mcQuizResult').textContent = `Incorrect! Correct answer was: ${correctAnswer}`;
+                document.getElementById('mcQuizResult').classList.add('incorrect');
+                mcIncorrectList.push(mcCurrentQuiz[mcCurrentCardIndex]);
+            }
+
+            // Disable all options
+            const options = document.querySelectorAll('#mcOptionsList li');
+            options.forEach(option => {
+                option.style.pointerEvents = 'none';
+            });
+
+            // Highlight correct answer
+            options.forEach(option => {
+                if (option.textContent === correctAnswer) {
+                    option.style.backgroundColor = '#28a745';
+                    option.style.color = '#fff';
+                }
+            });
+
+            if (selectedOption !== correctAnswer) {
+                selectedElement.style.backgroundColor = '#dc3545';
+                selectedElement.style.color = '#fff';
+            }
+
+            // Proceed to next question after a delay
+            setTimeout(() => {
+                mcCurrentCardIndex++;
+                if (mcCurrentCardIndex < mcCurrentQuiz.length) {
+                    showNextMCCard();
+                } else if (mcIncorrectList.length > 0) {
+                    shuffleArray(mcIncorrectList);
+                    alert('Now quizzing on incorrect answers.');
+                    mcCurrentQuiz = mcIncorrectList;
+                    mcIncorrectList = [];
+                    mcCurrentCardIndex = 0;
+                    showNextMCCard();
+                } else {
+                    alert('You have completed the quiz!');
+                    document.getElementById('mcQuizContainer').classList.add('hidden');
+                }
+            }, 1500);
+        }
+
+        // Utility Functions
+        function toggleView(showId) {
+            document.getElementById('flashcardForm').classList.add('hidden');
+            document.getElementById('quizArea').classList.add('hidden');
+            document.getElementById('multipleChoiceArea').classList.add('hidden');
+            document.getElementById(showId).classList.remove('hidden');
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    </script>
+</body>
+</html>
